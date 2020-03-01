@@ -4,6 +4,8 @@ Implementation of Gridworld domains based on OpenAI Gym 0.15.4.
 
 **GridWorldSingle**
 
+<img src = "Images/GridworldSingle_Domain.PNG" width = "200" title = "GridWorldSingle Domain"/>
+
 An experimental 5x5 Gridworld domain with actions "up", "down", "left", and "right." The start state is chosen uniformly at random from all states at the border of the grid. The goal state is in the center of the grid.
 
 **GridWorldOrient**
