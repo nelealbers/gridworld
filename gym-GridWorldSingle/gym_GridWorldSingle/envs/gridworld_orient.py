@@ -29,14 +29,14 @@ class GridWorldOrient(gym.Env):
     self.augmented = augmented
     self.q_values = q_values
     
+    # number of non-copied states
+    self.num_true_states = grid_width * grid_width * 4
+    
     if not augmented:
-        self.observation_space = spaces.Discrete(grid_width * grid_width * 4)
+        self.observation_space = spaces.Discrete(self.num_true_states)
     else:
         # duplicate each state but the goal states
         self.observation_space = spaces.Discrete(self.num_true_states * 2 - 4)
-        
-    # number of non-copied states
-    self.num_true_states = grid_width * grid_width * 4
     
     self.MAX_STEPS = 100 # max. number of steps per episodes
     self.num_steps = 0 # steps taken so far
