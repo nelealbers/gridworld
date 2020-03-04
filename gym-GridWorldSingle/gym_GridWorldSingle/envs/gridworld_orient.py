@@ -35,8 +35,8 @@ class GridWorldOrient(gym.Env):
     if not augmented:
         self.observation_space = spaces.Discrete(self.num_true_states)
     else:
-        # duplicate each state but the goal states
-        self.observation_space = spaces.Discrete(self.num_true_states * 2 - 4)
+        # duplicate each state but the goal states and add another terminal state
+        self.observation_space = spaces.Discrete(self.num_true_states * 2 - 3)
     
     self.MAX_STEPS = 100 # max. number of steps per episodes
     self.num_steps = 0 # steps taken so far
@@ -47,6 +47,8 @@ class GridWorldOrient(gym.Env):
     
     # types of states
     self.TERMINAL_STATES = [int(np.floor((self.grid_width * self.grid_width) / 2)) * 4 + i for i in range(4)]
+    if augmented:
+        self.TERMINAL_STATES.append(self.observation_space.n - 1)
     self.NON_TERMINAL_STATES = np.arange(0, self.observation_space.n)
     self.NON_TERMINAL_STATES = [i for i in self.NON_TERMINAL_STATES if i not in self.TERMINAL_STATES]
     
@@ -93,19 +95,24 @@ class GridWorldOrient(gym.Env):
     
     # transition probabilities for state copies
     if self.augmented:
-        for s in range(self.num_true_states, self.observation_space.n):
+        for s in range(self.num_true_states, self.observation_space.n - 1):
             index = self._get_index_augmented_state(s)
             opt_act = np.argmax(q_values[index])
             next_state_opt_act = int(np.where(self.P[opt_act, index] == 1)[0][0])
             self.P[opt_act, s, next_state_opt_act] = 1 # maintain trans. prob. for optimal action
-            self.P[(opt_act + 1) % 2, s, s] = 1 # stay in same state for non-optimal action
+            self.P[(opt_act + 1) % 2, s, self.observation_space.n - 1] = 1 # go to new terminal states for non-optimal action
     
     # rewards for arriving in a certain state
     self.R = np.full((self.action_space.n,
                          self.observation_space.n), 0)
     
+    # rewards for arriving in goal states
     for i in self.TERMINAL_STATES:
         self.R[:, i] = 1
+    
+    # reward for arriving in new terminal state is 0
+    if augmented:
+        self.R[:, self.observation_space.n - 1] = 0
         
     self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]
         
@@ -118,6 +125,10 @@ class GridWorldOrient(gym.Env):
     # current state is an original state
     if not (self.augmented and orig_state >= self.num_true_states):
         return self.state, self.R[action, self.state], done , ""
+    
+    # state is the new terminal state
+    elif orig_state == self.observation_space.n - 1:
+        return self.state, self.R[action, self.state], done, ""
     
     # current state is a state copy
     else:
@@ -166,6 +177,9 @@ class GridWorldOrient(gym.Env):
     corresponds to.
     '''
     if s < self.num_true_states: # not an augmented state
+        return s
+    
+    if self.augmented and s == self.observation_space.n - 1: # new terminal state
         return s
     
     index = s - self.num_true_states
