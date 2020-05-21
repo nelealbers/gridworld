@@ -13,7 +13,8 @@ from random import choice
 class GridWorldOrient(gym.Env):
   metadata = {'render.modes': ['human']}
 
-  def __init__(self, grid_width = 3, augmented = False, q_values = []):
+  def __init__(self, grid_width = 3, augmented = False, q_values = [], 
+               modified_rewards = False):
       
     '''
     augmented: if true, then a copy of each non-terminal state is made.
@@ -21,6 +22,7 @@ class GridWorldOrient(gym.Env):
                different transition probabilities.
     q-values: needed if augmented = True to set the rewards for the state copies
               (dim.: num_orig_states x num_actions)
+    modified_rewards: modified rewards
     '''
     self.reward_range = (0, 1)
     self.action_space = spaces.Discrete(2) # forward, rotate
@@ -28,6 +30,7 @@ class GridWorldOrient(gym.Env):
     self.grid_width = grid_width
     self.augmented = augmented
     self.q_values = q_values
+    self.modified_rewards = modified_rewards
     
     # number of non-copied states
     self.num_true_states = grid_width * grid_width * 4
@@ -109,13 +112,20 @@ class GridWorldOrient(gym.Env):
     # rewards for arriving in goal states
     for i in self.TERMINAL_STATES:
         self.R[:, i] = 1
+        
+    # change some immediate rewards
+    if self.modified_rewards:
+        for i in [1, int(self.grid_width * 4 - 2), 
+                  int(self.grid_width * self.grid_width - 1), 
+                  int(self.grid_width * 4 * (self.grid_width - 1))]:
+            self.R[0, i] = -1
     
     # reward for arriving in new terminal state is 0
     if augmented:
         self.R[:, self.observation_space.n - 1] = 0
         
-    self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]
-        
+    self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]    
+    
   def step(self, action):
     orig_state = self.state
     self.state = self.trans[self.state][action]
