@@ -14,7 +14,7 @@ class GridWorldOrient(gym.Env):
   metadata = {'render.modes': ['human']}
 
   def __init__(self, grid_width = 3, augmented = False, q_values = [], 
-               modified_rewards = False):
+               modified_rewards = False, modified_transitions = False):
       
     '''
     augmented: if true, then a copy of each non-terminal state is made.
@@ -23,6 +23,7 @@ class GridWorldOrient(gym.Env):
     q-values: needed if augmented = True to set the rewards for the state copies
               (dim.: num_orig_states x num_actions)
     modified_rewards: modified rewards
+    modified_transitions: modified transition probabilities
     '''
     self.reward_range = (0, 1)
     self.action_space = spaces.Discrete(2) # forward, rotate
@@ -31,6 +32,7 @@ class GridWorldOrient(gym.Env):
     self.augmented = augmented
     self.q_values = q_values
     self.modified_rewards = modified_rewards
+    self.modified_transitions = modified_transitions
     
     # number of non-copied states
     self.num_true_states = grid_width * grid_width * 4
@@ -120,15 +122,31 @@ class GridWorldOrient(gym.Env):
                   int(self.grid_width * 4 * (self.grid_width - 1))]:
             self.R[0, i] = -1
     
+    # change some transition probabilities:
+    if self.modified_transitions:
+        prob_wrong = 0.5
+        changed_states = [int(self.grid_width * 2 - 1), int(self.grid_width * 4 * np.floor(self.grid_width /2)), 
+                          int(self.grid_width * 4 * (np.floor(self.grid_width /2) + 1) - 2),
+                          int(self.grid_width * 4 * (self.grid_width - 1) + self.grid_width * 2 + 1)]
+        prime_wrong = [changed_states[0] + 3, int(self.grid_width * 2 - 3),
+                       int(self.grid_width * 4 * (self.grid_width - 1) + self.grid_width * 2 + 3),
+                       int(self.grid_width * 4 * (self.grid_width - 1) + self.grid_width * 2 - 4)]
+        for idx, i in enumerate(changed_states):
+            curr_s_prime = np.argmax(self.P[1, i])
+            self.P[1, i, curr_s_prime] = 1 - prob_wrong
+            self.P[1, i, prime_wrong[idx]] = prob_wrong
+    
     # reward for arriving in new terminal state is 0
     if augmented:
         self.R[:, self.observation_space.n - 1] = 0
-        
-    self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]    
+    
+    # deterministic next state
+    if not modified_transitions:
+        self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]    
     
   def step(self, action):
     orig_state = self.state
-    self.state = self.trans[self.state][action]
+    self.state = int(np.random.choice(self.observation_space.n, 1, p = self.P[action, self.state]))
     self.num_steps += 1
     done = (self.state in self.TERMINAL_STATES) or (self.num_steps == self.MAX_STEPS - 1)
     
@@ -147,7 +165,7 @@ class GridWorldOrient(gym.Env):
         if action == opt_act:
             return self.state, self.R[action, self.state], done , ""
         else:
-            # non-optimal action in augmented state terminates episdoe
+            # non-optimal action in augmented state terminates episode
             return self.state, self.q_values[index, action], True, ""
       
   def reset(self):
