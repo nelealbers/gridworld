@@ -140,9 +140,42 @@ class GridWorldOrient(gym.Env):
     if augmented:
         self.R[:, self.observation_space.n - 1] = 0
     
-    # deterministic next state
+    # deterministic next state 
     if not modified_transitions:
         self.trans = [[np.where(self.P[i][j] == 1)[0][0] for i in range(self.action_space.n)] for j in range(self.observation_space.n)]    
+    
+    # Optimal actions per ground state (6 denotes terminal state)
+    if self.modified_rewards:
+        if self.grid_width == 3 and not self.augmented:
+                self.OPTIMAL_ACTIONS = [1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0,
+                                       1, 0, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0,
+                                       1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1] 
+        elif self.grid_width == 5 and not self.augmented:
+            self.OPTIMAL_ACTIONS = [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0,
+                                   1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0,
+                                   1, 0, 1, 1, 1, 0, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0, 1, 1, 1, 0,
+                                   0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 
+                                   1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1]
+    else:
+        if self.grid_width == 3:
+            if not self.augmented:
+                self.OPTIMAL_ACTIONS = [1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0,
+                                       1, 0, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0,
+                                       0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0]
+            else:
+                self.OPTIMAL_ACTIONS = [1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0,
+                                       1, 0, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0,
+                                       0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0,
+                                       1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0,
+                                       1, 0, 1, 1, 1, 1, 1, 0,
+                                       0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0,
+                                       6]
+        elif self.grid_width == 5 and not self.augmented:
+            self.OPTIMAL_ACTIONS = [1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0,
+                                   1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0,
+                                   1, 0, 1, 1, 1, 0, 1, 1, 6, 6, 6, 6, 1, 1, 1, 0, 1, 1, 1, 0,
+                                   0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 
+                                   0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0]
     
   def step(self, action):
     orig_state = self.state
